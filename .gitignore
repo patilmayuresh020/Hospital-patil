@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+hospital.db
+backend/hospital.db
+uploads/
+*.bat
+SHARE_LINK.txt
