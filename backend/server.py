@@ -4,13 +4,15 @@ from flask_cors import CORS
 import sqlite3
 import os
 
-app = Flask(__name__, static_folder='../', static_url_path='/')
-CORS(app) # Enable CORS for frontend communication
-
 # Connect to DB in the same directory as this script
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..'))
 DB_FILE = os.path.join(BASE_DIR, 'hospital.db')
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+
+app = Flask(__name__, static_folder=PROJECT_ROOT, static_url_path='')
+CORS(app) # Enable CORS for frontend communication
+
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -26,6 +28,23 @@ def serve_uploads(filename):
 @app.route('/<path:path>')
 def serve_static(path):
     return app.send_static_file(path)
+
+@app.route('/api/debug_fs')
+def debug_fs():
+    import os
+    try:
+        current = os.getcwd()
+        ls_current = os.listdir(current)
+        ls_root = os.listdir(PROJECT_ROOT)
+        return jsonify({
+            "cwd": current, 
+            "ls_cwd": ls_current,
+            "project_root": PROJECT_ROOT,
+            "ls_root": ls_root,
+            "static_folder": app.static_folder
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 def get_db_connection():
     conn = sqlite3.connect(DB_FILE)
