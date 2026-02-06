@@ -43,8 +43,8 @@
     <div id="login-screen">
         <div class="login-container">
             <h2 style="text-align:center; color:var(--primary-blue); margin-bottom:20px;">Doctor Login</h2>
-            <div id="debug-status" style="text-align:center; color:#666; font-size:0.8rem; margin-bottom:10px;">Init...
-            </div>
+            <div id="debug-status"
+                style="text-align:center; color:#666; font-size:0.8rem; margin-bottom:10px; min-height: 1.2em;"></div>
             <form onsubmit="handleLogin(event)">
                 <div class="form-group">
                     <label>Select Your Name</label>
@@ -57,6 +57,8 @@
                     <label>Password</label>
                     <input type="password" id="login-password" class="form-select" placeholder="Enter Password"
                         required>
+                    <small style="color:#888; display:block; margin-top:5px;">(Hint: Use your Doctor ID e.g.
+                        'admin1')</small>
                 </div>
                 <button type="submit" class="btn-primary" style="width:100%;">Login</button>
             </form>
@@ -217,14 +219,14 @@
 
         async function init() {
             const debugEl = document.getElementById('debug-status');
-            debugEl.textContent = "Checking saved session...";
+            // Removed "Checking session..." message to avoid flicker
 
             // Check for persistent login
             const savedUser = localStorage.getItem('doctor_user');
             if (savedUser) {
                 try {
                     const user = JSON.parse(savedUser);
-                    debugEl.textContent = "Session found: " + (user.name || 'Unknown');
+                    debugEl.textContent = "Welcome back, " + (user.name || 'Doctor');
                     console.log("Auto-login success:", user);
 
                     // Validate User Object
@@ -234,12 +236,12 @@
                         throw new Error("Invalid User Data");
                     }
                 } catch (e) {
-                    debugEl.textContent = "Session invalid. Cleared.";
+                    debugEl.textContent = "";
                     console.error("Auto-login failed:", e);
                     localStorage.removeItem('doctor_user');
                 }
             } else {
-                debugEl.textContent = "No active session.";
+                debugEl.textContent = ""; // Keep clean if no session
                 console.log("No saved user found.");
             }
 

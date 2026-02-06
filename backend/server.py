@@ -382,7 +382,5 @@ def update_doctor_status():
 #         "waitTime": int(data.get('wait_time', 15))
 #     })
 
-if __name__ == '__main__':
-    print("Starting Smart Hospital Backend on http://0.0.0.0:5000")
-    print("To share on LAN, give friends your IP address: http://YOUR_IP:5000")
-    app.run(host='0.0.0.0', debug=True, port=5000)
+
+
