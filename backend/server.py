@@ -309,12 +309,13 @@ def get_patient_history(mobile):
 
 @app.route('/api/doctor/report', methods=['POST'])
 def save_report():
-    # Handle both JSON and FormData
-    if request.content_type.startswith('multipart/form-data'):
+    # Handle both JSON and FormData (including urlencoded)
+    if 'multipart/form-data' in request.content_type or 'application/x-www-form-urlencoded' in request.content_type:
         data = request.form
         file = request.files.get('file')
     else:
-        data = request.json
+        # Assume JSON or try to parse it
+        data = request.get_json(silent=True) or {}
         file = None
 
     apt_id = data['appointment_id']
