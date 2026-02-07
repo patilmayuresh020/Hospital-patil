@@ -35,6 +35,7 @@ def health_check():
     return jsonify({
         "status": "running",
         "migration": MIGRATION_STATUS,
+        "version": "v1.0.5-fix-notes-field",
         "cwd": os.getcwd(),
         "db_file": DB_FILE,
         "db_exists": os.path.exists(DB_FILE)
