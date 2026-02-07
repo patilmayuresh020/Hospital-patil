@@ -13,6 +13,11 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 app = Flask(__name__, static_folder=PROJECT_ROOT, static_url_path='')
 CORS(app) # Enable CORS for frontend communication
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    return jsonify({"error": str(e), "type": str(type(e))}), 500
+
+
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
