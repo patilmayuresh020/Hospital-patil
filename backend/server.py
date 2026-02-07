@@ -167,12 +167,13 @@ def init_db_if_needed():
     try:
         # Check if users table exists
         conn.execute("SELECT 1 FROM users LIMIT 1")
-        # Run migrations for existing DBs
-        run_migrations(conn)
     except sqlite3.OperationalError:
         create_schema(conn)
-    finally:
-        conn.close()
+    
+    # Run migrations for ALL DBs (new or existing) to ensure latest schema
+    run_migrations(conn)
+    
+    conn.close()
 
 # Initialize DB on module load (for Gunicorn)
 init_db_if_needed()
