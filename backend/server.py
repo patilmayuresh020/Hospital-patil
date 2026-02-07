@@ -30,6 +30,17 @@ def serve_index():
 def serve_uploads(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
+@app.route('/api/health')
+def health_check():
+    return jsonify({
+        "status": "running",
+        "migration": MIGRATION_STATUS,
+        "cwd": os.getcwd(),
+        "db_file": DB_FILE,
+        "db_exists": os.path.exists(DB_FILE)
+    })
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
 @app.route('/<path:path>')
 def serve_static(path):
     return app.send_static_file(path)
@@ -136,7 +147,11 @@ def create_schema(conn):
             )
         conn.commit()
 
+
+MIGRATION_STATUS = "Not Started"
+
 def run_migrations(conn):
+    global MIGRATION_STATUS
     print("Checking for required migrations...")
     try:
         # Check reports table for new columns
@@ -162,9 +177,11 @@ def run_migrations(conn):
         )
         ''')
         print("Migrations check completed.")
+        MIGRATION_STATUS = "Success"
         
     except Exception as e:
         print(f"Migration Error: {e}")
+        MIGRATION_STATUS = f"Error: {str(e)}"
 
 def init_db_if_needed():
     # Ensure DB exists
