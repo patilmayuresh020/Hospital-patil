@@ -265,8 +265,8 @@ def book_appointment():
     data = request.json
     conn = get_db_connection()
     
-    cursor = conn.execute('INSERT INTO appointments (dept, date, status, user_mobile, report_id) VALUES (?, ?, ?, ?, ?)',
-                 (data['dept'], data['date'], 'Scheduled', data['mobile'], None))
+    cursor = conn.execute('INSERT INTO appointments (dept, date, status, user_mobile, report_id, patient_name, patient_age) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                 (data['dept'], data['date'], 'Scheduled', data['mobile'], None, data.get('patient_name'), data.get('patient_age')))
     conn.commit()
     new_id = cursor.lastrowid
     conn.close()
