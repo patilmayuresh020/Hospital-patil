@@ -5,13 +5,12 @@ import sqlite3
 import os
 
 try:
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
+    import pymysql
+    import pymysql.cursors
 except ImportError:
-    psycopg2 = None
-    RealDictCursor = None
+    pymysql = None
 
-# Connect to DB: Use PostgreSQL if DATABASE_URL is set (Render), else SQLite (Local)
+# Connect to DB: Use MySQL if DATABASE_URL is set (Render/Railway), else SQLite (Local)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..'))
 DB_FILE = os.path.join(BASE_DIR, 'hospital.db')
@@ -46,7 +45,7 @@ def serve_admin():
 
 @app.route('/api/health')
 def health_check():
-    db_type = "PostgreSQL" if DATABASE_URL else "SQLite"
+    db_type = "MySQL" if DATABASE_URL else "SQLite"
     return jsonify({
         "status": "running",
         "migration": MIGRATION_STATUS,
@@ -60,7 +59,29 @@ def serve_static(path):
 
 def get_db_connection():
     if DATABASE_URL:
-        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        # Parse DATABASE_URL manually or use a library if needed, 
+        # but pymysql doesn't take the full URL string directly in quite the same way as psycopg2 usually.
+        # However, for simplicity in Railway, we can often just pass the params.
+        # Let's assume DATABASE_URL format: mysql://user:pass@host:port/dbname
+        # We'll use a helper to parse or just string logic.
+        
+        from urllib.parse import urlparse
+        result = urlparse(DATABASE_URL)
+        
+        username = result.username
+        password = result.password
+        database = result.path[1:]
+        hostname = result.hostname
+        port = result.port
+        
+        conn = pymysql.connect(
+            host=hostname,
+            user=username,
+            password=password,
+            database=database,
+            port=port,
+            cursorclass=pymysql.cursors.DictCursor
+        )
     else:
         conn = sqlite3.connect(DB_FILE)
         conn.row_factory = sqlite3.Row
@@ -70,7 +91,7 @@ def execute_query(query, params=(), fetchone=False, fetchall=False, commit=False
     conn = get_db_connection()
     try:
         if DATABASE_URL:
-            # Postgres specific: placeholders are %s
+            # MySQL specific: placeholders are %s, same as Postgres library logic usually
             query = query.replace('?', '%s')
             
         cur = conn.cursor()
@@ -79,7 +100,8 @@ def execute_query(query, params=(), fetchone=False, fetchall=False, commit=False
         if commit:
             conn.commit()
             if DATABASE_URL:
-                # Postgres RETURNING id handling if needed but usually separate
+                # MySQL doesn't easy return ID with RETURNING.
+                # Use cursor.lastrowid if needed via the cursor object returned.
                 pass
             return cur # return cursor for lastrowid access if needed
             
@@ -101,7 +123,7 @@ def create_schema(conn):
     # 1. USERS TABLE
     cur.execute('''
     CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
+        id INT AUTO_INCREMENT PRIMARY KEY,
         name TEXT NOT NULL,
         age INTEGER,
         mobile TEXT UNIQUE NOT NULL,
@@ -134,7 +156,7 @@ def create_schema(conn):
     # 2. APPOINTMENTS TABLE
     cur.execute('''
     CREATE TABLE IF NOT EXISTS appointments (
-        id SERIAL PRIMARY KEY,
+        id INT AUTO_INCREMENT PRIMARY KEY,
         dept TEXT NOT NULL,
         doctor_name TEXT,
         date TEXT NOT NULL,
@@ -163,7 +185,7 @@ def create_schema(conn):
     # 3. REPORTS TABLE
     cur.execute('''
     CREATE TABLE IF NOT EXISTS reports (
-        id SERIAL PRIMARY KEY,
+        id INT AUTO_INCREMENT PRIMARY KEY,
         appointment_id INTEGER NOT NULL UNIQUE,
         diagnosis TEXT,
         medicines TEXT,
@@ -198,7 +220,7 @@ def create_schema(conn):
     # 5. MESSAGES TABLE
     cur.execute('''
     CREATE TABLE IF NOT EXISTS messages (
-        id SERIAL PRIMARY KEY,
+        id INT AUTO_INCREMENT PRIMARY KEY,
         name TEXT,
         subject TEXT,
         message TEXT,
@@ -223,9 +245,9 @@ def create_schema(conn):
     
     # Check if this fetchone returning dict or tuple?
     # sqlite3.Row -> acts like dict and tuple
-    # psycopg2 -> RealDictCursor -> Dict
+    # pymysql -> DictCursor -> Dict
     # But wait, create_schema calls conn.fetchone? No, cur.fetchone
-    # If RealDictCursor, result is {'count': 0} or similar.
+    # If DictCursor, result is {'count': 0} or similar.
     # To be safe, let's normalize access.
     
     if isinstance(user_count, dict):
@@ -275,7 +297,7 @@ def run_migrations(conn):
         # Logic differs significantly for Postgres vs SQLite logic for PRAGMA
         
         if DATABASE_URL:
-             # Postgres migration check
+             # MySQL migration check
              cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'reports'")
              columns = [row['column_name'] for row in cur.fetchall()]
         else:
@@ -307,7 +329,7 @@ def init_db_if_needed():
         # Check if users table exists
         try:
             cur.execute("SELECT 1 FROM users LIMIT 1")
-        except (sqlite3.OperationalError, psycopg2.Error if psycopg2 else sqlite3.OperationalError):
+        except (sqlite3.OperationalError, pymysql.Error if pymysql else sqlite3.OperationalError):
             conn.rollback()
             create_schema(conn)
     
